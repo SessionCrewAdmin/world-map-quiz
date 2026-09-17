@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The World Speaks English – Vector Map Quiz</title>
+<style>
+:root{
+  --bg:#f5f1e7; --ink:#173248; --accent:#d2a23a; --land:#d7e1e7;
+  --land-hover:#c3d1d9; --water:#eef6f9; --ok:#2f7d5a; --bad:#a4473c;
+  --card:#fff; --muted:#6a7c88;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink)}
+body{overflow:hidden}
+button{font:inherit}
+.app{height:100%;display:flex;flex-direction:column}
+.topbar{height:68px;padding:0 24px;display:flex;align-items:center;justify-content:space-between}
+.brand{font-weight:800;font-size:20px}
+.tools{display:flex;gap:10px}
+.btn{border:0;border-radius:12px;padding:11px 17px;font-weight:800;cursor:pointer}
+.btn-primary{background:var(--ink);color:#fff}
+.btn-light{background:#fff;color:var(--ink);border:1px solid #d8e0e5}
+.screen{flex:1;min-height:0;display:none;padding:22px 28px 30px}
+.screen.active{display:flex}
+
+#setup{align-items:center;justify-content:center}
+.setup-card,.brain-card{
+  background:#fff;border-radius:24px;box-shadow:0 18px 60px rgba(23,50,72,.10)
+}
+.setup-card{width:min(760px,92vw);padding:40px}
+.setup-card h1{font-size:clamp(38px,5vw,64px);margin:0 0 10px}
+.setup-card p{font-size:22px;color:var(--muted);margin:0}
+.country-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:28px 0}
+.country-btn{padding:18px 14px;border-radius:15px;border:2px solid #d8e0e5;background:#fff;font-weight:800;cursor:pointer}
+.country-btn.selected{border-color:var(--accent);box-shadow:0 0 0 3px rgba(210,162,58,.18)}
+
+#quiz{flex-direction:column;gap:14px}
+.quiz-head .eyebrow{font-size:18px;color:var(--muted);margin-bottom:4px}
+.quiz-head .country-name{font-size:clamp(40px,4.5vw,68px);font-weight:900;line-height:1}
+.map-card{
+  position:relative;flex:1;min-height:0;background:#fff;border-radius:24px;
+  overflow:hidden;box-shadow:0 18px 60px rgba(23,50,72,.10)
+}
+svg{width:100%;height:100%;display:block;background:var(--water)}
+.graticule{fill:none;stroke:#dbe7ec;stroke-width:.7}
+.sphere{fill:var(--water)}
+.country{fill:var(--land);stroke:#fff;stroke-width:.7;cursor:pointer;transition:.12s}
+.country:hover{fill:var(--land-hover)}
+.country.correct-country{fill:#79b493!important;stroke:#2f7d5a;stroke-width:1.7}
+.map-note{
+  position:absolute;left:18px;bottom:18px;padding:9px 12px;border-radius:10px;
+  background:rgba(255,255,255,.94);box-shadow:0 4px 16px rgba(0,0,0,.09);
+  font-size:16px;pointer-events:none
+}
+.loading{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  background:rgba(255,255,255,.94);z-index:20;font-size:22px;font-weight:800;text-align:center;padding:30px
+}
+.loading.hidden{display:none}
+.feedback{
+  position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+  background:rgba(245,241,231,.8);backdrop-filter:blur(4px);z-index:30
+}
+.feedback.show{display:flex}
+.feedback-card{
+  min-width:320px;text-align:center;background:#fff;border-radius:20px;padding:28px 32px;
+  box-shadow:0 18px 60px rgba(0,0,0,.15)
+}
+.feedback-card .title{font-size:44px;font-weight:900;margin-bottom:6px}
+.feedback.correct .title{color:var(--ok)}
+.feedback.wrong .title{color:var(--bad)}
+.feedback-card p{font-size:22px;color:var(--muted);margin:0 0 20px}
+
+#brainstorm{align-items:center;justify-content:center}
+.brain-card{width:min(1100px,94vw);padding:50px 56px}
+.brain-card .label{color:var(--accent);font-size:18px;letter-spacing:.13em;text-transform:uppercase;font-weight:900;margin-bottom:14px}
+.brain-card h1{margin:0 0 18px;font-size:clamp(48px,6vw,88px);line-height:1}
+.brain-card .task{font-size:clamp(26px,3vw,38px);line-height:1.28;max-width:900px}
+.brain-bottom{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;margin-top:36px;flex-wrap:wrap}
+.timer{font-size:30px;font-weight:900}
+.subtle{color:var(--muted);font-size:20px;margin-top:4px}
+@media(max-width:760px){
+  .country-grid{grid-template-columns:1fr}
+  .screen{padding:16px}
+  .brain-card{padding:34px 28px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="brand">The World Speaks English</div>
+    <div class="tools">
+      <button class="btn btn-light" id="fullscreenBtn">Fullscreen</button>
+      <button class="btn btn-light" id="resetBtn">Reset</button>
+    </div>
+  </div>
+
+  <section id="setup" class="screen active">
+    <div class="setup-card">
+      <h1>Choose one country</h1>
+      <p>Students only need to find one country correctly.</p>
+      <div class="country-grid">
+        <button class="country-btn selected" data-country="South Africa">South Africa</button>
+        <button class="country-btn" data-country="India">India</button>
+        <button class="country-btn" data-country="Australia">Australia</button>
+      </div>
+      <button class="btn btn-primary" id="startBtn">Start</button>
+    </div>
+  </section>
+
+  <section id="quiz" class="screen">
+    <div class="quiz-head">
+      <div class="eyebrow">Click on the correct country.</div>
+      <div class="country-name" id="promptCountry">South Africa</div>
+    </div>
+
+    <div class="map-card">
+      <svg id="mapSvg" viewBox="0 0 1400 720" aria-label="Interactive vector world map"></svg>
+      <div class="map-note">Wrong click → try again · Correct click → brainstorming</div>
+      <div id="loading" class="loading">Loading real country boundaries…</div>
+
+      <div id="wrongFeedback" class="feedback wrong">
+        <div class="feedback-card">
+          <div class="title">Not quite.</div>
+          <p>Try again.</p>
+          <button class="btn btn-primary" id="tryAgainBtn">Back to the map</button>
+        </div>
+      </div>
+
+      <div id="correctFeedback" class="feedback correct">
+        <div class="feedback-card">
+          <div class="title">Correct!</div>
+          <p>Move on to brainstorming.</p>
+          <button class="btn btn-primary" id="brainstormBtn">Continue</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="brainstorm" class="screen">
+    <div class="brain-card">
+      <div class="label">Brainstorming</div>
+      <h1 id="brainCountry">South Africa</h1>
+      <div class="task">Create a mind map with <strong>everything you already know</strong> about this country.</div>
+      <div class="brain-bottom">
+        <div>
+          <div class="timer">3 minutes</div>
+          <div class="subtle">Short notes only.</div>
+        </div>
+        <button class="btn btn-primary" id="newRoundBtn">New round</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
+<script>
+(() => {
+  let targetCountry = "South Africa";
+  let worldFeatures = [];
+  let ready = false;
+
+  const allowed = ["South Africa","India","Australia"];
+  const screens = {
+    setup: document.getElementById("setup"),
+    quiz: document.getElementById("quiz"),
+    brainstorm: document.getElementById("brainstorm")
+  };
+  const showScreen = name => {
+    Object.values(screens).forEach(s=>s.classList.remove("active"));
+    screens[name].classList.add("active");
+  };
+
+  function setTarget(name){
+    targetCountry = name;
+    document.getElementById("promptCountry").textContent = name;
+    document.getElementById("brainCountry").textContent = name;
+    document.querySelectorAll(".country-btn").forEach(b=>{
+      b.classList.toggle("selected", b.dataset.country === name);
+    });
+  }
+
+  document.querySelectorAll(".country-btn").forEach(btn=>{
+    btn.addEventListener("click",()=>setTarget(btn.dataset.country));
+  });
+
+  const q = new URLSearchParams(location.search).get("country");
+  if(q){
+    const candidate = decodeURIComponent(q).replaceAll("-"," ");
+    const matched = allowed.find(x=>x.toLowerCase()===candidate.toLowerCase());
+    if(matched) setTarget(matched);
+  }
+
+  const svg = d3.select("#mapSvg");
+  const projection = d3.geoNaturalEarth1()
+    .fitExtent([[28,24],[1372,696]], {type:"Sphere"});
+  const path = d3.geoPath(projection);
+
+  svg.append("path").datum({type:"Sphere"}).attr("class","sphere").attr("d",path);
+  svg.append("path").datum(d3.geoGraticule10()).attr("class","graticule").attr("d",path);
+
+  const countryUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
+
+  fetch(countryUrl)
+    .then(r=>{
+      if(!r.ok) throw new Error("Boundary data could not be loaded.");
+      return r.json();
+    })
+    .then(world=>{
+      worldFeatures = topojson.feature(world, world.objects.countries).features;
+      svg.selectAll("path.country")
+        .data(worldFeatures)
+        .join("path")
+        .attr("class","country")
+        .attr("d",path)
+        .attr("data-name",d=>d.properties.name)
+        .on("click",function(event,d){
+          event.stopPropagation();
+          const name = d.properties.name;
+          if(name === targetCountry){
+            d3.select(this).classed("correct-country",true);
+            document.getElementById("correctFeedback").classList.add("show");
+          } else {
+            document.getElementById("wrongFeedback").classList.add("show");
+          }
+        });
+      ready = true;
+      document.getElementById("loading").classList.add("hidden");
+    })
+    .catch(err=>{
+      console.error(err);
+      document.getElementById("loading").innerHTML =
+        "The country boundary file could not be loaded.<br>Please check the internet connection.";
+    });
+
+  svg.on("click",()=>{
+    if(ready) document.getElementById("wrongFeedback").classList.add("show");
+  });
+
+  document.getElementById("startBtn").addEventListener("click",()=>showScreen("quiz"));
+  document.getElementById("tryAgainBtn").addEventListener("click",()=>{
+    document.getElementById("wrongFeedback").classList.remove("show");
+  });
+  document.getElementById("brainstormBtn").addEventListener("click",()=>{
+    document.getElementById("correctFeedback").classList.remove("show");
+    showScreen("brainstorm");
+  });
+  document.getElementById("newRoundBtn").addEventListener("click",()=>showScreen("setup"));
+  document.getElementById("resetBtn").addEventListener("click",()=>{
+    document.getElementById("wrongFeedback").classList.remove("show");
+    document.getElementById("correctFeedback").classList.remove("show");
+    svg.selectAll(".country").classed("correct-country",false);
+    showScreen("setup");
+  });
+  document.getElementById("fullscreenBtn").addEventListener("click",async()=>{
+    try{
+      if(!document.fullscreenElement) await document.documentElement.requestFullscreen();
+      else await document.exitFullscreen();
+    }catch(_){}
+  });
+})();
+</script>
+</body>
+</html>
