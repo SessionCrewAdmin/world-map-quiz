@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bonus Round – The World Speaks English</title>
+<style>
+:root{
+  --bg:#f5f1e7; --ink:#173248; --accent:#d2a23a; --land:#d7e1e7;
+  --land-hover:#c3d1d9; --water:#eef6f9; --ok:#2f7d5a; --bad:#a4473c;
+  --card:#fff; --muted:#6a7c88;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink)}
+body{overflow:hidden}
+button{font:inherit}
+.app{height:100%;display:flex;flex-direction:column}
+.topbar{height:68px;padding:0 24px;display:flex;align-items:center;justify-content:space-between}
+.brand{font-weight:800;font-size:20px}
+.badge{font-size:14px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#7a5c12;background:#f5e7b8;padding:8px 12px;border-radius:999px}
+.screen{flex:1;min-height:0;display:none;padding:22px 28px 30px}
+.screen.active{display:flex}
+.btn{border:0;border-radius:12px;padding:12px 19px;font-weight:800;cursor:pointer}
+.btn-primary{background:var(--ink);color:#fff}
+.btn-light{background:#fff;color:var(--ink);border:1px solid #d8e0e5}
+
+#intro,#win{align-items:center;justify-content:center}
+.card{
+  width:min(900px,94vw);background:#fff;border-radius:26px;padding:46px 50px;
+  box-shadow:0 18px 60px rgba(23,50,72,.11)
+}
+.card h1{margin:0 0 14px;font-size:clamp(44px,6vw,84px);line-height:1}
+.card p{font-size:clamp(20px,2.2vw,30px);line-height:1.35;color:var(--muted)}
+.rules{margin:28px 0 30px;padding:20px 22px;background:#f8fafb;border-radius:16px;font-size:22px;line-height:1.5}
+.reward{margin-top:18px;font-size:24px;font-weight:900;color:#7a5c12}
+
+#quiz{flex-direction:column;gap:14px}
+.quiz-head{display:grid;grid-template-columns:1fr auto;gap:20px;align-items:end}
+.eyebrow{font-size:17px;color:var(--muted);margin-bottom:5px}
+.country-name{font-size:clamp(38px,4.8vw,70px);font-weight:900;line-height:1}
+.progress{text-align:right}
+.progress strong{display:block;font-size:28px}
+.progress span{color:var(--muted);font-size:16px}
+
+.map-card{
+  position:relative;flex:1;min-height:0;background:#fff;border-radius:24px;
+  overflow:hidden;box-shadow:0 18px 60px rgba(23,50,72,.10)
+}
+svg{width:100%;height:100%;display:block;background:var(--water)}
+.graticule{fill:none;stroke:#dbe7ec;stroke-width:.7}
+.sphere{fill:var(--water)}
+.country{fill:var(--land);stroke:#fff;stroke-width:.7;cursor:pointer;transition:.12s}
+.country:hover{fill:var(--land-hover)}
+.country.correct-country{fill:#79b493!important;stroke:#2f7d5a;stroke-width:1.7}
+.loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.95);z-index:20;font-size:22px;font-weight:800;text-align:center;padding:30px}
+.loading.hidden{display:none}
+.feedback{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(245,241,232,.82);backdrop-filter:blur(4px);z-index:30}
+.feedback.show{display:flex}
+.feedback-card{min-width:330px;text-align:center;background:#fff;border-radius:20px;padding:28px 32px;box-shadow:0 18px 60px rgba(0,0,0,.15)}
+.feedback-card .title{font-size:44px;font-weight:900;margin-bottom:6px}
+.feedback.correct .title{color:var(--ok)}
+.feedback.wrong .title{color:var(--bad)}
+.feedback-card p{font-size:21px;color:var(--muted);margin:0 0 20px}
+
+.win-card{text-align:center}
+.trophy{font-size:70px;margin-bottom:10px}
+.win-card h1{font-size:clamp(52px,7vw,96px)}
+.pass{
+  margin:28px auto 18px;max-width:650px;border:3px dashed var(--accent);border-radius:22px;
+  padding:24px;background:#fffaf0
+}
+.pass .small{font-size:15px;text-transform:uppercase;letter-spacing:.16em;color:#8c6a1b;font-weight:900}
+.pass .title{font-size:clamp(36px,5vw,64px);font-weight:900;margin:8px 0}
+.pass .code{font-size:28px;font-weight:900;color:var(--ink);letter-spacing:.12em}
+.pass .time{font-size:15px;color:var(--muted);margin-top:10px}
+.note{font-size:18px!important}
+@media(max-width:760px){
+  .screen{padding:16px}
+  .card{padding:32px 26px}
+  .quiz-head{grid-template-columns:1fr}
+  .progress{text-align:left}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="brand">The World Speaks English</div>
+    <div class="badge">Bonus Round</div>
+  </div>
+
+  <section id="intro" class="screen active">
+    <div class="card">
+      <h1>Bonus Round</h1>
+      <p>How well do you know the English-speaking world?</p>
+      <div class="rules">
+        <strong>Challenge:</strong> Find all <span id="countryCount">14</span> countries in a row.<br>
+        One wrong click resets your streak to zero.
+      </div>
+      <div class="reward">Reward: 1 Homework Pass</div>
+      <div style="margin-top:28px">
+        <button class="btn btn-primary" id="startBtn">Start challenge</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="quiz" class="screen">
+    <div class="quiz-head">
+      <div>
+        <div class="eyebrow">Click on the correct country.</div>
+        <div class="country-name" id="promptCountry">United Kingdom</div>
+      </div>
+      <div class="progress">
+        <strong id="progressText">0 / 14</strong>
+        <span>correct in a row</span>
+      </div>
+    </div>
+
+    <div class="map-card">
+      <svg id="mapSvg" viewBox="0 0 1400 720" aria-label="Bonus world map"></svg>
+      <div id="loading" class="loading">Loading world map…</div>
+
+      <div id="wrongFeedback" class="feedback wrong">
+        <div class="feedback-card">
+          <div class="title">Streak reset!</div>
+          <p id="wrongText">That was not the right country.</p>
+          <button class="btn btn-primary" id="restartBtn">Start again</button>
+        </div>
+      </div>
+
+      <div id="correctFeedback" class="feedback correct">
+        <div class="feedback-card">
+          <div class="title">Correct!</div>
+          <p id="correctText">Keep going.</p>
+          <button class="btn btn-primary" id="nextBtn">Next country</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="win" class="screen">
+    <div class="card win-card">
+      <div class="trophy">🏆</div>
+      <h1>Perfect round!</h1>
+      <p>You found every country without a mistake.</p>
+      <div class="pass">
+        <div class="small">Reward earned</div>
+        <div class="title">Homework Pass</div>
+        <div class="code" id="rewardCode">PASS-0000</div>
+        <div class="time" id="rewardTime"></div>
+      </div>
+      <p class="note">Show this screen to your teacher.</p>
+    </div>
+  </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
+<script>
+(() => {
+  const challengeCountries = [
+    "United Kingdom",
+    "Ireland",
+    "United States of America",
+    "Canada",
+    "New Zealand",
+    "Jamaica",
+    "Singapore",
+    "Nigeria",
+    "Kenya",
+    "Philippines",
+    "Ghana",
+    "Bahamas",
+    "Malta",
+    "Barbados"
+  ];
+
+  // world-atlas naming aliases
+  const aliases = {
+    "United States": "United States of America",
+    "United Kingdom": "United Kingdom",
+    "The Bahamas": "Bahamas",
+    "Bahamas": "Bahamas"
+  };
+
+  let order = [];
+  let index = 0;
+  let ready = false;
+
+  const screens = {
+    intro: document.getElementById("intro"),
+    quiz: document.getElementById("quiz"),
+    win: document.getElementById("win")
+  };
+
+  document.getElementById("countryCount").textContent = challengeCountries.length;
+
+  function show(name){
+    Object.values(screens).forEach(s=>s.classList.remove("active"));
+    screens[name].classList.add("active");
+  }
+
+  function shuffle(arr){
+    const a=[...arr];
+    for(let i=a.length-1;i>0;i--){
+      const j=Math.floor(Math.random()*(i+1));
+      [a[i],a[j]]=[a[j],a[i]];
+    }
+    return a;
+  }
+
+  function normalizeName(name){
+    return aliases[name] || name;
+  }
+
+  function currentCountry(){
+    return order[index];
+  }
+
+  function updateUI(){
+    document.getElementById("promptCountry").textContent = currentCountry();
+    document.getElementById("progressText").textContent = `${index} / ${challengeCountries.length}`;
+    d3.selectAll(".country").classed("correct-country", false);
+  }
+
+  function newGame(){
+    order = shuffle(challengeCountries);
+    index = 0;
+    updateUI();
+    show("quiz");
+  }
+
+  function issueReward(){
+    const code = "PASS-" + Math.floor(1000 + Math.random()*9000);
+    const now = new Date();
+    document.getElementById("rewardCode").textContent = code;
+    document.getElementById("rewardTime").textContent =
+      now.toLocaleDateString() + " · " + now.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+    localStorage.setItem("homeworkPassEarned", JSON.stringify({
+      code, timestamp: now.toISOString()
+    }));
+    show("win");
+  }
+
+  const svg = d3.select("#mapSvg");
+  const projection = d3.geoNaturalEarth1().fitExtent([[28,24],[1372,696]], {type:"Sphere"});
+  const path = d3.geoPath(projection);
+
+  svg.append("path").datum({type:"Sphere"}).attr("class","sphere").attr("d",path);
+  svg.append("path").datum(d3.geoGraticule10()).attr("class","graticule").attr("d",path);
+
+  fetch("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json")
+    .then(r=>{
+      if(!r.ok) throw new Error("Could not load world map.");
+      return r.json();
+    })
+    .then(world=>{
+      const features = topojson.feature(world, world.objects.countries).features;
+      svg.selectAll("path.country")
+        .data(features)
+        .join("path")
+        .attr("class","country")
+        .attr("d",path)
+        .attr("data-name",d=>d.properties.name)
+        .on("click",function(event,d){
+          event.stopPropagation();
+          const clicked = normalizeName(d.properties.name);
+          const target = currentCountry();
+
+          if(clicked === target){
+            d3.select(this).classed("correct-country",true);
+            index++;
+            document.getElementById("progressText").textContent = `${index} / ${challengeCountries.length}`;
+
+            if(index >= challengeCountries.length){
+              document.getElementById("correctText").textContent = "That was the final country!";
+              document.getElementById("nextBtn").textContent = "Claim Homework Pass";
+            } else {
+              document.getElementById("correctText").textContent = `${index} correct in a row.`;
+              document.getElementById("nextBtn").textContent = "Next country";
+            }
+
+            document.getElementById("correctFeedback").classList.add("show");
+          } else {
+            document.getElementById("wrongText").textContent =
+              `You clicked ${clicked || "the wrong place"}. Your streak returns to zero.`;
+            document.getElementById("wrongFeedback").classList.add("show");
+          }
+        });
+
+      ready=true;
+      document.getElementById("loading").classList.add("hidden");
+    })
+    .catch(err=>{
+      console.error(err);
+      document.getElementById("loading").innerHTML =
+        "The map could not be loaded.<br>Please check the internet connection.";
+    });
+
+  svg.on("click",()=>{
+    if(!ready) return;
+    document.getElementById("wrongText").textContent =
+      "That was not a country in the challenge. Your streak returns to zero.";
+    document.getElementById("wrongFeedback").classList.add("show");
+  });
+
+  document.getElementById("startBtn").addEventListener("click",newGame);
+
+  document.getElementById("restartBtn").addEventListener("click",()=>{
+    document.getElementById("wrongFeedback").classList.remove("show");
+    newGame();
+  });
+
+  document.getElementById("nextBtn").addEventListener("click",()=>{
+    document.getElementById("correctFeedback").classList.remove("show");
+    if(index >= challengeCountries.length){
+      issueReward();
+    } else {
+      updateUI();
+    }
+  });
+})();
+</script>
+</body>
+</html>
